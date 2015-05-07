@@ -97,19 +97,23 @@ class AdminAction extends AdministratorAction {
 		$data['recommend'] = intval($_POST['recommend']);
 		$data['status'] = 1;
 		$res = D('Weiba','weiba')->add($data);
+		model('LeanCloud','weiba')->cloud_save($data);
 		if($res) {
 			if($_POST['admin_uid']){      //超级吧主加入微吧
 				$follow['follower_uid'] = $data['admin_uid'];
 				$follow['weiba_id'] = $res;
 				$follow['level'] = 3;
 				D('weiba_follow')->add($follow);
+				model('LeanCloud','weiba_follow')->cloud_save($follow);
 			}
 			if($data['admin_uid'] != $this->mid){    //创建者加入微吧
 				$follows['follower_uid'] = $this->mid;
 				$follows['weiba_id'] = $res;
 				$follows['level'] = 1;
 				D('weiba_follow')->add($follows);
+				model('LeanCloud','weiba_follow')->cloud_save($follow);
 				D('weiba')->where('weiba_id='.$res)->setInc('follower_count');
+				model('LeanCloud','weiba')->cloud_update(array('weiba_id'=>$res),array('follower_count',array('__op'=>'Increment','amount'=>1)));
 			}
 			$this->assign('jumpUrl', U('weiba/Admin/index'));
 			$this->success(L('PUBLIC_ADD_SUCCESS'));
@@ -176,6 +180,7 @@ class AdminAction extends AdministratorAction {
 		$data['admin_uid'] = t($_POST['admin_uid']);
 		$data['recommend'] = intval($_POST['recommend']);
 		$res = D('weiba')->where('weiba_id='.$weiba_id)->save($data);
+		model('LeanCloud','weiba')->cloud_update(array('weiba_id'=>$weiba_id),$data);
 		if($res!==false) {
 			//现有超级吧主
 			$follow['level'] = 3;
@@ -185,15 +190,18 @@ class AdminAction extends AdministratorAction {
 				$a['follower_uid'] = $admin_uid;
 				$a['weiba_id'] = $weiba_id;
 				D('weiba_follow')->where($a)->setField('level',1);
+				model('LeanCloud','weiba_follow')->cloud_update($a,array('level'=>1));
 			}
 			if($data['admin_uid']){			
 				$follows['follower_uid'] = $data['admin_uid'];
 				$follows['weiba_id'] = $weiba_id;
 				if(D('weiba_follow')->where($follows)->find()){  //该吧主已经为成员
 					D('weiba_follow')->where($follows)->where($follows)->setField('level',3);
+					model('LeanCloud','weiba_follow')->cloud_update($follows,array('level'=>3));
 				}else{
 					$follows['level'] = 3;
 					D('weiba_follow')->add($follows);
+					model('LeanCloud','weiba_follow')->cloud_save($follows);
 				}
 			}
 			$this->assign('jumpUrl', U('weiba/Admin/index'));
@@ -239,6 +247,7 @@ class AdminAction extends AdministratorAction {
 				$this->error( '已存在相同分类！' );
 			}
 			$res = D('WeibaCategory')->add($data);
+			model('LeanCloud','WeibaCategory')->cloud_save($data);
 			if ( $res ){
 				$this->assign( 'jumpUrl' , U('weiba/Admin/weibaCate',array('tabHash'=>'weibaCate')) );
 				$this->success( '添加成功' );
@@ -276,6 +285,7 @@ class AdminAction extends AdministratorAction {
 				$this->error('已存在相同分类！');
 			}
 			$res = D('WeibaCategory')->where('id='.$id)->save($data);
+			model('LeanCloud','WeibaCategory')->cloud_update(array('id'=>$id),$data);
 			if ( $res ){
 				$this->assign( 'jumpUrl' , U('weiba/Admin/weibaCate',array('tabHash'=>'weibaCate')) );
 				$this->success( '编辑成功' );
@@ -302,6 +312,7 @@ class AdminAction extends AdministratorAction {
 				exit(json_encode($return));
 			}
 			$res = D('WeibaCategory')->where($map)->delete();
+			model('LeanCloud','WeibaCategory')->cloud_delete($map);
 			if ( $res ){
 				$return['status'] = 1;
 				$return['data'] = '删除成功';
@@ -329,10 +340,12 @@ class AdminAction extends AdministratorAction {
 		}
 		$weiba_id = intval($_POST['weiba_id']);
 		$result = D('weiba')->where('weiba_id='.$weiba_id)->setField('recommend',$value);
+		model('LeanCloud','weiba')->cloud_update(array('weiba_id'=>$weiba_id),array('recommend'=>$value));
 		$uid = D('weiba')->where('weiba_id='.$weiba_id)->getField('uid');
 		//添加积分
 		if($value == 1){
 			model('Credit')->setUserCredit($uid,'recommended_weiba');
+			model('LeanCloud','credit_user')->cloud_set_user_credit($uid,'recommended_weiba');
 		}
 
 		if(!$result){
@@ -358,6 +371,7 @@ class AdminAction extends AdministratorAction {
 		!is_array($_POST['weiba_id']) && $_POST['weiba_id'] = array($_POST['weiba_id']);
 		$data['weiba_id'] = array('in',$_POST['weiba_id']);
 		$result = D('weiba')->where($data)->setField('is_del',1);
+		model('LeanCloud','weiba')->cloud_update($data,array('is_del'=>1));
 		if($result){
 			// D('weiba_post')->where('weiba_id='.$weiba_id)->delete();
 			// D('weiba_reply')->where('weiba_id='.$weiba_id)->delete();
@@ -457,6 +471,7 @@ class AdminAction extends AdministratorAction {
 		}	
 		$post_id = intval($_POST['post_id']);
 		$result = D('weiba_post')->where('post_id='.$post_id)->setField($field,$value);
+		model('LeanCloud','weiba_follow')->cloud_update(array('post_id'=>$post_id),array($field=>$value));
 		if(!$result){
 			$return['status'] = 0;
 			$return['data'] = L('PUBLIC_ADMIN_OPRETING_ERROR');
@@ -469,6 +484,7 @@ class AdminAction extends AdministratorAction {
 					//添加积分
 					if( $value == 1 ){
 						model('Credit')->setUserCredit($post_detail['post_uid'],'recommend_topic');
+						model('LeanCloud','Credit')->cloud_set_user_credit($post_detail['post_uid'],'recommend_topic');
 					}
 					break;
 				case '2':         //精华
@@ -477,6 +493,7 @@ class AdminAction extends AdministratorAction {
 						model('Notify')->sendNotify($post_detail['post_uid'], 'weiba_post_set', $config); 
 						//添加积分
 						model('Credit')->setUserCredit($post_detail['post_uid'],'dist_topic');
+						model('LeanCloud','Credit')->cloud_set_user_credit($post_detail['post_uid'],'dist_topic');
 					}
 
 					break;
@@ -486,11 +503,13 @@ class AdminAction extends AdministratorAction {
 						model('Notify')->sendNotify($post_detail['post_uid'], 'weiba_post_set', $config); 
 						//添加积分
 						model('Credit')->setUserCredit($post_detail['post_uid'],'top_topic_weiba');
+						model('LeanCloud','Credit')->cloud_set_user_credit($post_detail['post_uid'],'top_topic_weiba');
 					}else if($value == 2){
 						$config['typename'] = "全局置顶";
 						model('Notify')->sendNotify($post_detail['post_uid'], 'weiba_post_set', $config); 
 						//添加积分
 						model('Credit')->setUserCredit($post_detail['post_uid'],'top_topic_all');
+						model('LeanCloud','Credit')->cloud_set_user_credit($post_detail['post_uid'],'top_topic_all');
 					}
 					break;
 			}	
@@ -546,6 +565,7 @@ class AdminAction extends AdministratorAction {
 		$data['digest'] = intval($_POST['digest']);
 		$data['top'] = intval($_POST['top']);
 		$res = D('weiba_post')->where('post_id='.$post_id)->save($data);
+		model('LeanCloud','weiba_post')->cloud_update(array('post_id'=>$post_id),$data);
 		if($res!==false){
 			//同步到微博
 			$feed_id = D('weiba_post')->where('post_id='.$post_id)->getField('feed_id');
@@ -556,6 +576,7 @@ class AdminAction extends AdministratorAction {
 			$data1['feed_data'] = serialize($datas);
 			$data1['feed_content'] = $datas['content'];
 			D('feed_data')->where('feed_id='.$feed_id)->save($data1);
+			model('LeanCloud','feed_data')->cloud_update(array('feed_id'=>$feed_id),$data1);
 			model('Cache')->rm('fd_'.$feed_id);
 			$this->assign('jumpUrl', U('weiba/Admin/postList',array('tabHash'=>'postList')));
 			$this->success(L('PUBLIC_SYSTEM_MODIFY_SUCCESS'));
@@ -581,6 +602,7 @@ class AdminAction extends AdministratorAction {
 			$postList = D('weiba_post')->where($data)->findAll();
 			foreach($postList as $v){
 				D('weiba')->where('weiba_id='.$v['weiba_id'])->setDec('thread_count');
+				model('LeanCloud','weiba')->cloud_update(array('weiba_id'=>$v['weiba_id']),array('thread_count',array('__op'=>'Increment','amount'=>-1)));
 			}
 			$return['status'] = 1;
 			$return['data']   = L('PUBLIC_ADMIN_OPRETING_SUCCESS');
@@ -607,8 +629,10 @@ class AdminAction extends AdministratorAction {
 			$replyList = D('weiba_reply')->where('post_id='.$v['post_id'].' AND is_del=0')->order('reply_id ASC')->findAll();
 			foreach($replyList as $key=>$val){
 				D('weiba_reply')->where('reply_id='.$val['reply_id'])->setField('storey',$key+1);
+				model('LeanCloud','weiba_reply')->cloud_update(array('reply_id'=>$val['reply_id']),array('storey'=>$key+1));
 			}
 			D('weiba_post')->where('post_id='.$v['post_id'])->setField('reply_all_count',count($replyList)); //总回复统计数加1
+			model('LeanCloud','weiba_post')->cloud_update(array('post_id'=>$v['post_id']),array('reply_all_count'=>count($replyList)));
 		}
 		echo 1;exit;
 	}
@@ -626,10 +650,12 @@ class AdminAction extends AdministratorAction {
 		!is_array($_POST['post_id']) && $_POST['post_id'] = array($_POST['post_id']);
 		$data['post_id'] = array('in',$_POST['post_id']);
 		$res = D('weiba_post')->where($data)->setField('is_del',0);
+		model('LeanCloud','weiba_post')->cloud_update($data,array('is_del'=>0));
 		if($res){
 			$postList = D('weiba_post')->where($data)->findAll();
 			foreach($postList as $v){
 				D('weiba')->where('weiba_id='.$v['weiba_id'])->setInc('thread_count');
+				model('LeanCloud','weiba')->cloud_update(array('weiba_id'=>$v['weiba_id']),array('thread_count',array('__op'=>'Increment','amount'=>1)));
 			}
 			$return['status'] = 1;
 			$return['data']   = L('PUBLIC_ADMIN_OPRETING_SUCCESS');
@@ -653,8 +679,10 @@ class AdminAction extends AdministratorAction {
 		!is_array($_POST['post_id']) && $_POST['post_id'] = array($_POST['post_id']);
 		$data['post_id'] = array('in',$_POST['post_id']);
 		$res = D('weiba_post')->where($data)->delete();
+		model('LeanCloud','weiba_post')->cloud_delete($data);
 		if($res){
 			D('weiba_reply')->where($data)->delete();
+			model('LeanCloud','weiba_reply')->cloud_delete($data);
 			$return['status'] = 1;
 			$return['data']   = L('PUBLIC_ADMIN_OPRETING_SUCCESS');
 		}else{
@@ -718,6 +746,7 @@ class AdminAction extends AdministratorAction {
 		$data['status'] = intval($_POST['val']);
 		$data['manager_uid'] = $this->mid;
 		$res = D('weiba_apply')->where($map)->save($data);
+		model('LeanCloud','weiba_apply')->cloud_update($map,$data);
 		if($res){
 			$return['status'] = 1;
 			$return['data']   = L('PUBLIC_ADMIN_OPRETING_SUCCESS');

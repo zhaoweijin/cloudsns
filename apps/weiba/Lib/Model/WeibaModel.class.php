@@ -4,6 +4,8 @@
  * @author jason <yangjs17@yeah.net> 
  * @version TS3.0
  */
+tsload(APPS_PATH.'/admin/Lib/Action/AdministratorAction.class.php');
+
 class WeibaModel extends Model {
 
 	protected $tableName = 'weiba';
@@ -461,5 +463,6 @@ class WeibaModel extends Model {
 	public function getLastError () {
 		return $this->error;
 	}
+
 
 }

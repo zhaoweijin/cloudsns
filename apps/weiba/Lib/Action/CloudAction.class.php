@@ -18,10 +18,15 @@ class CloudAction extends Action {
 		// $obj->name = 'dennis zhuang';
 		// $save = $obj->save();
 		// 
-		$updateObject = new leancloud\AVObject('message');
-		$updateObject->score = 3000;
-		$return = $updateObject->update('5547600ae4b03fd83449fd6a');
-		var_dump($return,123);exit;
+		// $updateObject = new leancloud\AVObject('message');
+		// $updateObject->score = array('__op'=>'Increment','amount'=>1);
+		// $return = $updateObject->update('5547600ae4b03fd83449fd6a');
+		// var_dump($return);exit;
+		// 
+		$query = new leancloud\AVQuery('message');
+    	$query->where('name','dennis zhuang');
+		$return = $query->find();
+		var_dump($return,$return->results[0]->objectId);
 	}
 
 	/**
