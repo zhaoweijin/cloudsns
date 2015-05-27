@@ -58,7 +58,7 @@ class IndexAction extends Action {
 	}
 
 	/**
-	 * 帖子列表
+	 * 帖子列表—
 	 */
 	public function postList(){
 		//微吧推荐
