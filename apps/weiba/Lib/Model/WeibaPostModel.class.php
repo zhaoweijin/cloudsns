@@ -16,7 +16,7 @@ class WeibaPostModel extends Model {
 						);
 
 	/**
-	 * 发帖同步到微博
+	 * 发帖同步到微博-
 	 * @param integer post_id 帖子ID
 	 * @param string title 帖子标题
 	 * @param string content 帖子内容
