@@ -13,9 +13,9 @@ class CloudAction extends Action {
 	 * @return void
 	 */
 	public function index() {
-		//$obj = new leancloud\AVObject('message');
-		// $obj->score = 1000;
-		// $obj->name = 'dennis zhuang';
+		// $obj = new leancloud\AVObject('user_data');
+		// $obj->mtime = array('__type' => 'Date', 'iso'=>gmdate("Y-m-d\TH:i:s.000\Z"));
+		// $obj->test = date('Y-m-d H:i:s');
 		// $save = $obj->save();
 		// 
 		// $updateObject = new leancloud\AVObject('message');
@@ -23,10 +23,53 @@ class CloudAction extends Action {
 		// $return = $updateObject->update('5547600ae4b03fd83449fd6a');
 		// var_dump($return);exit;
 		// 
-		$query = new leancloud\AVQuery('message');
-    	$query->where('name','dennis zhuang');
-		$return = $query->find();
-		var_dump($return,$return->results[0]->objectId);
+		// $query = new leancloud\AVQuery('user_data');
+  //   	$query->where("test",array('$gt'=>'2015-05-19 11:32:07'));
+  //  		$return = $query->find();
+		// var_dump($return);
+		// 
+		// 
+		// $data[] = "('123', '234', 345, 465)";
+		// var_dump($data,implode(',', $data));
+		// var_dump($return,$return->results[0]->objectId);
+		// $topPostList = D('weiba_post')->where('top=2 and is_del=0')->order('post_time desc')->findAll();
+		// var_dump(Addons::requireHooks('public_head'));
+		//var_dump(C('DATA_CACHE_TYPE'),C('DATA_CACHE_PATH'));exit;
+		// $data = array("('asd')");
+		// $res = D('')->execute('INSERT INTO test (`test`) VALUES '.implode(',', $data));
+		// var_dump(D('')->lastInsID);
+
+		//批量操作
+		
+		//$obj = new leancloud\AVObject('test');
+		//$obj->mtime = array('__type' => 'Date', 'iso'=>gmdate("Y-m-d\TH:i:s.000\Z"));
+		
+		// $obj->requests = array(
+		// 						array('body' => array('name'=>'a')), 
+		// 						array('body' => array('name'=>'b')), 
+		// 						array('body' => array('name'=>'c')), 
+		// 					);
+		// $save = $obj->save_all();
+		// 
+		//leancloud批量操作
+		
+		// $data = array(
+		// 		1=>array('name'=>'abc1'),
+		// 		2=>array('name'=>'abc2'),
+		// 		3=>array('name'=>'abc3'),
+		// 	);
+		//$save = model('LeanCloud')->cloud_save_all('test',$data);
+
+		//$map = array('name'=>123);
+		
+		//$res = D('ts_test')->execute('INSERT INTO ts_test (`name`) VALUES '.implode(',', $data));
+		//$res = D('test')->where($map)->find();
+		$query = new leancloud\AVQuery('weiba');
+    	$query->where("uid",1);
+    	$query->where("weiba_name","刀塔传奇2235");
+   		$return = $query->find();
+		var_dump($return);
+		
 	}
 
 	/**

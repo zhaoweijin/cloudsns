@@ -171,7 +171,7 @@ class App
      * @return void
      */
     static public function execWidget() {
-
+        
         //防止CSRF
         if(strtoupper($_SERVER['REQUEST_METHOD'])=='POST' && stripos($_SERVER['HTTP_REFERER'], SITE_URL)!==0 && $_SERVER['HTTP_USER_AGENT'] !== 'Shockwave Flash') {
             die('illegal request.');

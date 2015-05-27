@@ -95,8 +95,11 @@ class FeedModel extends Model {
         	}
         		
         }	
+
+        //var_dump($data);exit;
 		// 添加微博信息
 		$feed_id =  $this->data($data)->add();
+		$feed_id && model('LeanCloud')->cloud_save('feed',(int)$feed_id,$data);
 		if(!$feed_id) return false;
 		if(!$data['is_audit']){
 			$touid = D('user_group_link')->where('user_group_id=1')->field('uid')->findAll();
@@ -109,6 +112,7 @@ class FeedModel extends Model {
 		$data['body'] = str_replace(chr(31), '', $data['body']);
 		// 添加关联数据
 		$feed_data = D('FeedData')->data(array('feed_id'=>$feed_id,'feed_data'=>serialize($data),'client_ip'=>get_client_ip(),'feed_content'=>$data['body']))->add();
+		$feed_data && model('LeanCloud')->cloud_save('FeedData',(int)$feed_data,array('feed_id'=>$feed_id,'feed_data'=>serialize($data),'client_ip'=>get_client_ip(),'feed_content'=>$data['body']));
 
 		// 添加微博成功后
 		if($feed_id && $feed_data) {

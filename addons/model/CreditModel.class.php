@@ -226,14 +226,18 @@ class CreditModel extends Model {
 			}
 		}
 		$creditUser ['uid'] || $creditUser ['uid'] = $uid;
+
+			
 		// $res = $creditUserDao->save ( $creditUser ) || $res = $creditUserDao->add ( $creditUser ); // 首次进行积分计算的用户则为插入积分信息
 		if($creditUserDao->where('uid='.$creditUser['uid'])->count()){
 			$map['id'] = $creditUser['id'];
 			$map['uid'] = $creditUser['uid'];
 			unset($creditUser['id']);unset($creditUser['uid']);
-			$res = $creditUserDao->where($map)->save ( $creditUser );
+			$res = $creditUserDao->where($map)->save ( $creditUser );			
+			model('LeanCloud')->cloud_update('credit_user',$map,$creditUser);
 		}else{
 			$res = $creditUserDao->add ( $creditUser );
+			model('LeanCloud')->cloud_save('credit_user',(int)$res,$creditUser);
 		}                                  
 		// 用户进行积分操作后，登录用户的缓存将修改
 		$this->cleanCache($uid);

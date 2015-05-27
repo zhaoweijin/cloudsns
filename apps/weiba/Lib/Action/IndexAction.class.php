@@ -397,17 +397,28 @@ class IndexAction extends Action {
 		$data['last_reply_uid'] = $this->mid;
 		$data['last_reply_time'] = $data['post_time'];
 		$res = D('weiba_post')->add($data);
+		$res && model('LeanCloud')->cloud_save('weiba_post',(int)$res,$data);
 		if($res){
 			D('weiba')->where('weiba_id='.$data['weiba_id'])->setInc('thread_count');
-			//同步到微博
+			model('LeanCloud')->cloud_update('weiba',array('weiba_id'=>(int)$data['weiba_id']),array('thread_count'=>array('__op'=>'Increment','amount'=>1)));
+			/*同步到微博(先保留，以后转成异步同步)
+			*
+			* 
 			$feed_id = D('weibaPost')->syncToFeed($res,$data['title'],t($checkContent),$this->mid);
 			D('weiba_post')->where('post_id='.$res)->setField('feed_id',$feed_id);
+			model('LeanCloud')->cloud_update('weiba_post',array('post_id'=>(int)$res),array('feed_id'=>$feed_id));
+			*
+			* 
+			*/
+
+
 			//$this->assign('jumpUrl', U('weiba/Index/postDetail',array('post_id'=>$res)));
 			//$this->success('发布成功');
 
 			//添加积分
 			model('Credit')->setUserCredit($this->mid,'publish_topic');
 
+			var_dump($feed_id,$res);exit;
 			return $this->ajaxReturn($res, '发布成功', 1);
 		}else{
 			$this->error('发布失败',true);

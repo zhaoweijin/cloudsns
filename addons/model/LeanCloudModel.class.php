@@ -6,30 +6,178 @@
  * @version TS3.0
  */
 tsload(ADDON_PATH.'/library/leancloud-php-library/AV.php');
-class LeanCloudModel{
+class LeanCloudModel extends Model{
 	// 表名(class)
-    protected $class = '';
-    protected $creditType = '';
 
-	public function __construct($name='') {		
-        $this->class   =  $name;
+    protected $creditType = '';
+    protected $int_array = array('admin_uid','follower_uid','who_can_post');
+    protected $fields_array = '';
+
+    // protected $db_feed = array('feed_id'=>'int',
+				// 				'uid'=>'int',
+				// 				'type'=>'string',
+				// 				'app'=>'string',
+				// 				'app_row_table'=>'string',
+				// 				'app_row_id'=>'int',
+				// 				'publish_time'=>'int',
+				// 				'is_del'=>'int',
+				// 				'from tin'=>'int',
+				// 				'comment_count'=>'int',
+				// 				'repost_count'=>'int',
+				// 				'comment_all_count'=>'int',
+				// 				'digg_count'=>'int',
+				// 				'is_repost'=>'int',
+				// 				'is_audit'=>'int'
+				// 			);
+
+
+	/**
+     * 转换类型
+     * @param string $name C格式表名
+     * @access public
+     * @return string
+     */
+    public function get_field($name){
+    	$this->tableName = $name;
+    	if(false && S('leancloud_'.$name)){
+    		return S('leancloud_'.$name);
+    	}else{
+    		$this->flush();
+    		$fields = $this->db->getFields($this->getTableName());
+    		
+	    	foreach ($fields as $k => $v) {
+	    		if(strpos($v['type'],'int')!==false)
+	    			$data[$k] = 'int';
+	    		else
+	    			$data[$k] = 'string';    		
+	    	}
+	    	S('leancloud_'.$name,$data);
+	    	return $data;
+    	}
+    }
+
+	/**
+     * 数组数值转换
+     * @param array $data 
+     * @param array $fdata
+     * @access public
+     * @return string
+     */
+	public function mychange(&$data,$fdata) 
+	{
+		foreach ($data as $k => &$v) {
+			if(is_array($v))
+				continue;
+			if ($fdata[$k]=="int")
+				$v = (int)$v;
+			else
+				$v = (string)$v;			
+		}
 	}
+
+	/**
+     * 转换类型
+     * @access public
+     * @return string
+     */
+    public function changeType(&$array){
+    	foreach ($array as $key => $value) {
+    		if(in_array($key, $this->int_array))
+				$array[$key] = (int)$value;
+			else
+				$array[$key] = $value;
+    	}
+    }
+
+    /**
+     * 得到完整的数据表名
+     * @param array $array 需要转换数组
+     * @access public
+     * @return string
+     */
+    public function getTableName()
+    {
+        
+        $tableName  = !empty($this->tablePrefix) ? $this->tablePrefix : '';
+        if(!empty($this->tableName)) {
+            $tableName .= $this->tableName;
+        }else{
+            $tableName .= parse_name($this->name);
+        }
+        $tableName .= !empty($this->tableSuffix) ? $this->tableSuffix : '';
+        if(!empty($this->dbName))
+            $tableName    =  $this->dbName.'.'.$tableName;
+        $this->trueTableName    =   strtolower($tableName);
+        
+        return $this->trueTableName;
+    }
 
 	/**
 	 * avos数据插入
 	 * @param varchar classname 表名
+	 * @param int last_id 插入id
 	 * @param array data 数据
 	 * @return object 
 	 */
-	public function cloud_save($data){
-		$obj = new leancloud\AVObject(parse_name($this->class));
-		foreach ($data as $key => $value) {
-			if($key == 'admin_uid')
-				$obj->$key = (int)$value;
-			else
-				$obj->$key = $value;
-		}
+	public function cloud_save($classname,$last_id,$data){
+		//$this->changeType($data);
+
+
+		$fdata = $this->get_field(parse_name($classname));
+		$data = array_intersect_key($data, $fdata);
+		$this->mychange($data,$fdata);		
+
+		$this->tableName = parse_name($classname);
+		$this->flush();
+		$pk = $this->getPk();
+
+		$obj = new leancloud\AVObject(parse_name($classname));
+		foreach ($data as $key => $value) {			
+			$obj->$key = $value;
+		}	
+
+		$pk = $pk == 'id'?'di':$pk;	
+		
+		$obj->$pk = $last_id;
+		
 		$save = $obj->save();
+
+		if(is_string($save) && strstr($save,'system_error')){
+			var_dump($save);exit;
+		}
+			
+		return $save;
+	}
+
+	/**
+	 * avos批量数据插入
+	 * @param varchar classname 表名
+	 * @param array last_id=>data(array) 键值对二维数组数据
+	 * @return object 
+	 */
+	public function cloud_save_all($classname,$ldata){
+
+		$obj = new leancloud\AVObject(parse_name($classname));
+		$fdata = $this->get_field(parse_name($classname));
+		$this->tableName = parse_name($classname);
+		$this->flush();
+		$pk = $this->getPk();
+		$pk = $pk == 'id'?'di':$pk;
+		$requests = array();
+
+		foreach ($ldata as $k => $v) {
+			$v = array_intersect_key($v, $fdata);
+			$this->mychange($v,$fdata);
+			$v[$pk] = $k;
+			$requests[]['body'] = $v;
+		}
+		$obj->requests = $requests;
+		$save = $obj->save_all();
+//var_dump($obj->requests);exit;	
+		if(is_string($save) && strstr($save,'system_error')){
+			var_dump($save);exit;
+		}
+			
 		return $save;
 	}
 
@@ -40,26 +188,43 @@ class LeanCloudModel{
 	 * @param array data update数据 $key字段 $value值
 	 * @return object 
 	 */
-	public function cloud_update($wdata,$data){
+	public function cloud_update($classname,$wdata,$data){
+		//$this->changeType($data);
 
-		$query = new leancloud\AVQuery(parse_name($this->class));
+		$fdata = $this->get_field(parse_name($classname));
+		$wdata = array_intersect_key($wdata, $fdata);
+		$this->mychange($wdata,$fdata);		
+
+
+
+		$query = new leancloud\AVQuery(parse_name($classname));
 		if(is_array($wdata)){
 			foreach ($wdata as $_k1 => $_v1) {
-
-				if(is_array($_v1) && array_key_exists('in',$_v1)){
-					$query->where($_k1,array("$all"=>$_v1['in']));					
+				$_k1 = $_k1 == 'id'?'di':$_k1;
+				if(is_array($_v1) && $_v1[0]=='in'){					
+					//$query->where($_k1,array('$all'=>implode(',',$_v1[1])));					
+					$query->where($_k1,array('$in'=>array_map('intval',$_v1[1])));					
 				}else{
 					$query->where($_k1,$_v1);	
 				}
-				$ret = $query->find();
-				if($ret->results && is_array($ret->results)){
-					foreach ($ret->results as $_k3 => $_v3) {
-						$updateObject = new leancloud\AVObject(parse_name($this->name));
-						$return[] = $updateObject->update($_v3->objectId);
-					}															
-				}
+			}
+				
+			$ret = $query->find();
+			
+			if($ret->results && is_array($ret->results)){
+				foreach ($ret->results as $_k3 => $_v3) {
+					$updateObject = new leancloud\AVObject(parse_name($classname));
+					
+					foreach ($data as $_k4 => $_v4) {							
+						$updateObject->$_k4 = $_v4;
+					}
+											
+					$return[] = $updateObject->update($_v3->objectId);
+				}															
+			}
 
-			}  
+			
+			return $return;
 		}
 	}
 
@@ -69,108 +234,25 @@ class LeanCloudModel{
 	 * @param array wdata where数据 array[key] => array('in' => array(...,...))
 	 * @return object 
 	 */
-	public function cloud_delete($wdata){
-		$query = new leancloud\AVQuery(parse_name($this->name));
+	public function cloud_delete($classname,$wdata){
+		$query = new leancloud\AVQuery(parse_name($classname));
 		if(is_array($wdata)){
 			foreach ($wdata as $_k1 => $_v1) {
-
-				if(is_array($_v1) && array_key_exists('in',$_v1)){
-					$query->where($_k1,array("$all"=>$_v1['in']));					
+				$_k1 = $_k1 == 'id'?'di':$_k1;
+				if(is_array($_v1) && $_v1[0]=='in'){
+					$query->where($_k1,array('$in'=>array_map('intval',$_v1[1])));					
 				}else{
 					$query->where($_k1,$_v1);	
 				}
-				$ret = $query->find();
-				if($ret->results && is_array($ret->results)){
-					foreach ($ret->results as $_k3 => $_v3) {
-						$updateObject = new leancloud\AVObject(parse_name($this->name));
-						$return[] = $updateObject->delete($_v3->objectId);
-					}															
-				}
-
-			}  
+			} 	
+			$ret = $query->find();
+			if($ret->results && is_array($ret->results)){
+				foreach ($ret->results as $_k3 => $_v3) {
+					$updateObject = new leancloud\AVObject(parse_name($classname));
+					$return[] = $updateObject->delete($_v3->objectId);
+				}															
+			}			 
 			return $return;			
 		}
 	}
-
-	/**
-	 * 获取所有系统积分规则
-	 */
-	public function get_credit_rules() {
-		if (($res = F ( '_service_credit_rules' )) === false) {
-			$res = M ( 'credit_setting' )->order ( 'type ASC' )->findAll ();
-			F ( '_service_credit_rules', $res );
-		}
-		return $res;
-	}
-
-
-	public function get_credit_type(){
-		if (($this->creditType = F ( '_service_credit_type' )) === false) {
-			$this->creditType = M ( 'credit_type' )->order ( 'id ASC' )->findAll ();
-			F ( '_service_credit_type', $this->creditType );
-		}
-	}
-
-	/**
-	 * TS2兼容方法：设置用户积分
-	 * 操作用户积分
-	 *
-	 * @param int $uid
-	 *        	用户ID
-	 * @param array|string $action
-	 *        	系统设定的积分规则的名称
-	 *        	或临时定义的一个积分规则数组，例如array('score'=>-4,'experience'=>3)即socre减4点，experience加三点
-	 * @param string|int $type
-	 *        	reset:按照操作的值直接重设积分值，整型：作为操作的系数，-1可实现增减倒置
-	 * @return Object
-	 */
-	public function cloud_set_user_credit($uid, $action, $type = 1) {
-		$this->get_credit_type();
-		if (! $uid) {
-			$this->info = false;
-			return $this;
-		}
-		if (is_array ( $action )) {
-			$creditSet = $action;
-		} else {
-			// 获取配置规则
-			$credit_ruls = $this->get_credit_rules ();
-			foreach ( $credit_ruls as $v )
-				if ($v ['name'] == $action)
-					$creditSet = $v;
-		}
-		if (! $creditSet) {
-			$this->info = '积分规则不存在';
-			return $this;
-		}
-		$creditUserDao = M ( 'credit_user' );
-		$creditUser = $creditUserDao->where ( "uid={$uid}" )->find (); // 用户积分
-		                                                              // 积分计算
-		if ($type == 'reset') {
-			foreach ( $this->creditType as $v ) {
-				$creditUser [$v ['name']] = $creditSet [$v ['name']];
-			}
-		} else {
-			$type = intval ( $type );
-			foreach ( $this->creditType as $v ) {
-				$creditUser [$v ['name']] = $creditUser [$v ['name']] + ($type * $creditSet [$v ['name']]);
-			}
-		}
-		$creditUser ['uid'] || $creditUser ['uid'] = $uid;
-		// $res = $creditUserDao->save ( $creditUser ) || $res = $creditUserDao->add ( $creditUser ); // 首次进行积分计算的用户则为插入积分信息
-		if($creditUserDao->where('uid='.$creditUser['uid'])->count()){
-			$map['id'] = $creditUser['id'];
-			$map['uid'] = $creditUser['uid'];
-			unset($creditUser['id']);unset($creditUser['uid']);
-			//$res = $creditUserDao->where($map)->save ( $creditUser );
-			//$this->class = 'credit_user';
-			$this->cloud_update($map,$creditUser);
-		}else{
-			//$res = $creditUserDao->add ( $creditUser );
-			//$this->class = 'credit_user';
-			$this->cloud_save($creditUser);
-		}	
-		
-	}
-
 }

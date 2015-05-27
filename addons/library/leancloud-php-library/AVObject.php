@@ -3,6 +3,7 @@
 class AVObject extends AVRestClient{
 	public $_includes = array();
 	private $_className = '';
+	private $_version = '/1.1/';
 
 	public function __construct($class=''){
 		if($class != ''){
@@ -26,6 +27,28 @@ class AVObject extends AVRestClient{
 			$request = $this->request(array(
 				'method' => 'POST',
 				'requestUrl' => 'classes/'.$this->_className,
+				'data' => $this->data,
+			));
+			return $request;
+		}
+	}
+
+	/**
+	 * 批量更新 add by zwj
+	 * @return object 
+	 */
+	public function save_all(){
+		if(count($this->data) > 0 && $this->_className != ''){
+			foreach ($this->data['requests'] as $k => &$v) {
+				$v['method'] = 'POST';
+				$v['path'] = $this->_version.'classes/'.$this->_className;
+			}
+			
+			//echo(json_encode($this->data));exit;
+			$request = $this->request(array(
+				'method' => 'POST',
+				'requestUrl' => 'batch',
+				'requestUrlSon' => 'classes/'.$this->_className,
 				'data' => $this->data,
 			));
 			return $request;

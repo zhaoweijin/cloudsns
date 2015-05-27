@@ -105,7 +105,6 @@ class AVRestClient{
 		}
 
 
-
 		curl_setopt($c, CURLOPT_URL, $url);
 
 		$response = curl_exec($c);

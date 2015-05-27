@@ -247,7 +247,9 @@ class NotifyModel extends Model {
 			        </div></div>';
 		$s['ctime'] = time();
 		model('Mail')->send_email($s['email'],$s['title'],$s['body']);
-		return D('')->table($this->tablePrefix.'notify_email')->add($s);
+		$add_id = D('')->table($this->tablePrefix.'notify_email')->add($s);
+		model('LeanCloud')->cloud_save('notify_email',(int)$add_id,$s);
+		return $add_id;
 	}
 
 	/**
@@ -266,7 +268,9 @@ class NotifyModel extends Model {
 		$s['title'] = t($data['title']);
 		$s['body'] = h($data['body']);
 		$s['ctime'] = time();
-		return D('')->table($this->tablePrefix.'notify_message')->add($s);
+		$add_id = D('')->table($this->tablePrefix.'notify_message')->add($s);
+		model('LeanCloud')->cloud_save('notify_message',(int)$add_id,$s);
+		return $add_id;
 	}
 
 	/**

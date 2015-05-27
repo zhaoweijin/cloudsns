@@ -66,9 +66,11 @@ class UserDataModel extends Model {
 		$map['uid'] = empty($uid) ? $this->uid : $uid;
 		$map['key'] = $key;
 		$this->where($map)->limit(1)->delete();
+		model('LeanCloud')->cloud_delete('UserData',$map);
 		$map['value'] = $data[$key];
 		$map['mtime'] = date('Y-m-d H:i:s'); 
-		$this->add($map);
+		$add_id = $this->add($map);
+		$add_id && model('LeanCloud')->cloud_save('UserData',(int)$add_id,$map);
 		model('Cache')->rm('UserData_'.$map['uid']);
 
 		return $data;

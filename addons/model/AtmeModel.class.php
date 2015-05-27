@@ -129,6 +129,7 @@ class AtmeModel extends Model {
 	    		}
 	    		//更新userdata表里面的最近@的人的信息
 	    		$userdata->setField('value' , serialize( $udata ) , "`key`='user_recentat' AND uid=".$GLOBALS['ts']['mid']);
+                model('LeanCloud')->cloud_update('UserData',array('key'=>'user_recentat','uid'=>$GLOBALS['ts']['mid']),array('value',serialize($udata)));
 	    	} else {
 	    		$matchuids = array_slice( $matchuids , 0 , 10 );
 	    		$users = model( 'User' )->getUserInfoByUids( $matchuids );
@@ -142,7 +143,8 @@ class AtmeModel extends Model {
 	    		$data['key'] = 'user_recentat';
 	    		$data['value'] = serialize( $udata );
 	    		$data['mtime'] = time();
-	    		$userdata->add($data);
+	    		$add_id = $userdata->add($data);
+                $add_id && model('LeanCloud')->cloud_save('UserData',(int)$add_id,$data);
 	    	}
     	}
 	}
@@ -297,11 +299,23 @@ class AtmeModel extends Model {
 				continue; 
 			}
 			$data[] = "('{$this->_app}', '{$this->_app_table}', {$row_id}, {$u_v})";
+            $map[] = array(
+                    'app'=>$this->_app,
+                    'table'=>$this->_app_table,
+                    'row_id'=>$row_id,
+                    'uid'=>$u_v,
+                );
             // 更新@Me的未读数目
             model('UserCount')->updateUserCount($u_v, 'unread_atme', 1);
 		}
         !empty($data) && $res = $this->query('INSERT INTO '.$this->tablePrefix.'atme (`app`, `table`, `row_id`, `uid`) VALUES '.implode(',', $data));
-
+        
+        foreach ($map as $k => $v) {
+            $exist = D('atme')->where($v)->find();
+            $add_data[$exist['atme_id']] = $v;
+        }
+        
+        $res && model('LeanCloud')->cloud_save_all('atme',$add_data);
 		return $res;
 	}
 

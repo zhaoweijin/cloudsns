@@ -462,9 +462,8 @@ function D($name='', $app='@', $inclueCommonFunction=true) {
         }
         tsload(APPS_PATH.'/'.$app.'/Lib/Model/'.$className.'.class.php');
     }
-    
-    if(class_exists($className)) {
 
+    if(class_exists($className)) {
         $model = new $className();
     }else{
         $model  = new Model($name);
