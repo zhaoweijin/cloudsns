@@ -418,7 +418,7 @@ class IndexAction extends Action {
 			//添加积分
 			model('Credit')->setUserCredit($this->mid,'publish_topic');
 
-			var_dump($feed_id,$res);exit;
+
 			return $this->ajaxReturn($res, '发布成功', 1);
 		}else{
 			$this->error('发布失败',true);
