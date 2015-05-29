@@ -251,7 +251,7 @@ class IndexAction extends Action {
 	}
 
 	/**
-	 * 弹窗加入微吧
+	 * 弹窗加入微吧-
 	 */
 	public function joinWeiba(){
 		$weiba_id = intval($_GET['weiba_id']);
